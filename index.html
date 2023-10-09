@@ -154,7 +154,11 @@
                 const memberList = document.createElement("ul");
                 members.forEach((member) => {
                     const listItem = document.createElement("li");
-                    listItem.innerHTML = `ID: ${member.id}, Nome: ${member.name}, Cargo: ${member.position}
+                    listItem.innerHTML = `ID: ${member.id}, Nome: ${member.name}, Cargo: ${member.position}`;
+                    if (includeReason) {
+                        listItem.innerHTML += `, Motivo: ${member.reason}`;
+                    }
+                    listItem.innerHTML += `
                             <button onclick="removeMember('${member.id}')">Remover</button>
                             <button onclick="sendToBlacklist('${member.id}')">Enviar para Lista Negra</button>
                             <button onclick="editMember('${member.id}')">Editar Cargo</button>
@@ -209,3 +213,5 @@
     </script>
 </body>
 </html>
+
+
