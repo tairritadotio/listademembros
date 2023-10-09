@@ -1,0 +1,211 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Membros</title>
+</head>
+<body>
+    <center>
+        <img src="https://cdn.discordapp.com/attachments/1121604849159647273/1159490770890403870/hrd-removebg-preview.png?ex=653136ee&is=651ec1ee&hm=e7c110624646f6ef6d9a2825a776b9b84d176745357000158907c7b30814a339&" alt="">
+    </center>
+    <h1>Lista de Membros</h1>
+    <form id="member-form">
+        <label for="id">ID:</label>
+        <input type="text" id="id" required>
+        <label for="name">Nome:</label>
+        <input type="text" id="name" required>
+        <label for="position">Cargo:</label>
+        <input type="text" id="position" required>
+        <button type="button" onclick="addMember()">Adicionar Membro</button>
+    </form>
+
+    <!-- Lista de membros -->
+    <h2>Membros</h2>
+    <ul id="member-list">
+        <!-- A lista de membros será exibida aqui -->
+    </ul>
+
+    <!-- Lista de membros desligados -->
+    <h2>Desligados</h2>
+    <ul id="inactive-members">
+        <!-- A lista de membros desligados será exibida aqui -->
+    </ul>
+
+    <!-- Lista negra -->
+    <h2>Lista Negra</h2>
+    <ul id="blacklist">
+        <!-- A lista negra será exibida aqui -->
+    </ul>
+
+    <button type="button" onclick="saveToFile()">Salvar em Arquivo</button>
+    <input type="file" id="fileInput" style="display: none;">
+    <button type="button" onclick="loadFromFile()">Carregar de Arquivo</button>
+
+    <script>
+        let members = [];
+        let inactiveMembers = [];
+        let blacklist = [];
+
+        function addMember() {
+            const id = document.getElementById("id").value;
+            const name = document.getElementById("name").value;
+            const position = document.getElementById("position").value;
+
+            if (!id || !name || !position) {
+                alert("Preencha todos os campos!");
+                return;
+            }
+
+            const member = { id, name, position };
+            members.push(member);
+
+            displayMembers();
+            clearForm();
+        }
+
+        function editMember(id) {
+            const newPosition = prompt("Digite o novo cargo para o membro:");
+            if (newPosition) {
+                const memberToEdit = members.find((member) => member.id === id);
+                if (memberToEdit) {
+                    memberToEdit.position = newPosition;
+                    displayMembers();
+                }
+            }
+        }
+
+        function removeMember(id) {
+            const memberToRemove = members.find((member) => member.id === id);
+            if (memberToRemove) {
+                inactiveMembers.push({ ...memberToRemove, reason: "Desligado" });
+                members = members.filter((member) => member.id !== id);
+                displayMembers();
+                displayInactiveMembers();
+            }
+        }
+
+        function sendToBlacklist(id) {
+            const reason = prompt("Digite o motivo para enviar à Lista Negra:");
+            if (reason) {
+                const member = members.find((m) => m.id === id);
+                if (member) {
+                    blacklist.push({ ...member, reason });
+                    members = members.filter((m) => m.id !== id);
+                    displayMembers();
+                    displayBlacklist();
+                    displayInactiveMembers();
+                }
+            }
+        }
+
+        function removeFromBlacklist(id) {
+            blacklist = blacklist.filter((member) => member.id !== id);
+            displayBlacklist();
+        }
+
+        function rehireMember(id) {
+            const member = inactiveMembers.find((m) => m.id === id);
+            if (member) {
+                inactiveMembers = inactiveMembers.filter((m) => m.id !== id);
+                members.push(member);
+                displayMembers();
+                displayInactiveMembers();
+            }
+        }
+
+        function displayMembers() {
+            const memberList = document.getElementById("member-list");
+            memberList.innerHTML = "";
+            const membersByPosition = groupMembersByPosition(members);
+            displayMembersByPosition(memberList, membersByPosition);
+        }
+
+        function displayInactiveMembers() {
+            const inactiveMembersList = document.getElementById("inactive-members");
+            inactiveMembersList.innerHTML = "";
+            const inactiveMembersByPosition = groupMembersByPosition(inactiveMembers);
+            displayMembersByPosition(inactiveMembersList, inactiveMembersByPosition);
+        }
+
+        function displayBlacklist() {
+            const blacklistList = document.getElementById("blacklist");
+            blacklistList.innerHTML = "";
+            const blacklistByPosition = groupMembersByPosition(blacklist);
+            displayMembersByPosition(blacklistList, blacklistByPosition, true);
+        }
+
+        function groupMembersByPosition(memberList) {
+            const groupedMembers = {};
+            memberList.forEach((member) => {
+                if (!groupedMembers[member.position]) {
+                    groupedMembers[member.position] = [];
+                }
+                groupedMembers[member.position].push(member);
+            });
+            return groupedMembers;
+        }
+
+        function displayMembersByPosition(container, membersByPosition, includeReason = false) {
+            for (const [position, members] of Object.entries(membersByPosition)) {
+                const positionHeader = document.createElement("h3");
+                positionHeader.textContent = position;
+                container.appendChild(positionHeader);
+                const memberList = document.createElement("ul");
+                members.forEach((member) => {
+                    const listItem = document.createElement("li");
+                    listItem.innerHTML = `ID: ${member.id}, Nome: ${member.name}, Cargo: ${member.position}
+                            <button onclick="removeMember('${member.id}')">Remover</button>
+                            <button onclick="sendToBlacklist('${member.id}')">Enviar para Lista Negra</button>
+                            <button onclick="editMember('${member.id}')">Editar Cargo</button>
+                            ${includeReason ? `<button onclick="removeFromBlacklist('${member.id}')">Remover da Lista Negra</button>` : ''}
+                            <button onclick="rehireMember('${member.id}')">Recontratar</button>`;
+                    memberList.appendChild(listItem);
+                });
+                container.appendChild(memberList);
+            }
+        }
+
+        function clearForm() {
+            document.getElementById("id").value = "";
+            document.getElementById("name").value = "";
+            document.getElementById("position").value = "";
+        }
+
+        function saveToFile() {
+            const data = JSON.stringify({ members, inactiveMembers, blacklist });
+            const blob = new Blob([data], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.style.display = "none";
+            a.href = url;
+            a.download = "members.json";
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        }
+
+        function loadFromFile() {
+            const fileInput = document.getElementById("fileInput");
+            fileInput.addEventListener("change", (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target.result;
+                        const data = JSON.parse(content);
+                        members = data.members || [];
+                        inactiveMembers = data.inactiveMembers || [];
+                        blacklist = data.blacklist || [];
+                        displayMembers();
+                        displayInactiveMembers();
+                        displayBlacklist();
+                    };
+                    reader.readAsText(file);
+                }
+            });
+            fileInput.click();
+        }
+    </script>
+</body>
+</html>
